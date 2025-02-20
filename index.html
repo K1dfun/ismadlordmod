@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Is Madlord Mod Yet?</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.3.3"></script>
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom right, black, grey);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .container {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1s ease-in-out;
+        }
+        .date-box, .last-checked {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+            font-size: 0.9rem;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .big-text {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .small-text {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .check-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        .check-button:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Is Madlord Mod Yet?</h1>
+        <hr style='width: 80%; border: 1px solid white; margin: 10px auto;'>
+        <div id="result" class="big-text">Checking...</div>
+        <div id="date-box" class="date-box" style="display: none;"></div>
+        <div id="last-checked" class="last-checked"></div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <button id="check-button" class="check-button" onclick="checkModeratorStatus()">Check</button>
+    </div>
+    
+    <script>
+        async function checkModeratorStatus() {
+            const button = document.getElementById("check-button");
+            button.textContent = "Checking...";
+            button.disabled = true;
+            
+            try {
+                const searchResponse = await fetch("https://api.slin.dev/grab/v1/list?max_format_version=10&type=user_name&search_term=mrs.madlord");
+                if (!searchResponse.ok) throw new Error("Search API response was not ok");
+                const searchData = await searchResponse.json();
+                
+                if (!Array.isArray(searchData) || searchData.length === 0 || !searchData[0].user_id) {
+                    document.getElementById("result").textContent = "User not found";
+                    return;
+                }
+                
+                const userId = searchData[0].user_id;
+                const userResponse = await fetch(`https://api.slin.dev/grab/v1/get_user_info?user_id=${userId}`);
+                if (!userResponse.ok) throw new Error("User API response was not ok");
+                const userData = await userResponse.json();
+                
+                const resultElement = document.getElementById("result");
+                const dateBox = document.getElementById("date-box");
+                
+                if (userData.is_moderator === true) {
+                    resultElement.innerHTML = "YES!!!!!!! 🎉🥳";
+                    launchConfetti();
+                    
+                    let modDate = localStorage.getItem("modDate");
+                    if (!modDate) {
+                        modDate = new Date().toLocaleString();
+                        localStorage.setItem("modDate", modDate);
+                    }
+                    dateBox.textContent = "Mod since: " + modDate;
+                    dateBox.style.display = "block";
+                } else {
+                    resultElement.innerHTML = "<span style='font-size: 2rem;'>Nah not yet 😔</span>";
+                    localStorage.removeItem("modDate");
+                    dateBox.style.display = "none";
+                }
+                updateLastChecked();
+            } catch (error) {
+                document.getElementById("result").textContent = "Error fetching data";
+                console.error("Error fetching data:", error);
+            } finally {
+                button.textContent = "Check";
+                button.disabled = false;
+            }
+        }
+        
+        function launchConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+        
+        function updateLastChecked() {
+            const lastChecked = new Date().toLocaleString();
+            localStorage.setItem("lastChecked", lastChecked);
+            document.getElementById("last-checked").textContent = "Last checked: " + lastChecked;
+        }
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedLastChecked = localStorage.getItem("lastChecked");
+            if (savedLastChecked) {
+                document.getElementById("last-checked").textContent = "Last checked: " + savedLastChecked;
+            }
+            checkModeratorStatus();
+            setInterval(checkModeratorStatus, 300000); // Auto-check every 5 minutes
+        });
+    </script>
+</body>
+</html>
